@@ -21,7 +21,7 @@ setInterval(async () => {
 	const participants = await db.collection("participants").find({lastStatus:{$lt:new Date()-10000}}).toArray();
 
 	participants.map(participant => removeParticipant(participant))
-}, 150000);
+}, 15000);
 
 const removeParticipant = async (participant) => {
 	const session = mongoClient.startSession();

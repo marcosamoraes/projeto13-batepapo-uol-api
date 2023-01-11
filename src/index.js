@@ -4,7 +4,7 @@ import cors from "cors";
 import Message from "./schemas/Message.js";
 import Participant from "./schemas/Participant.js";
 import { MongoClient } from "mongodb";
-import { validateParticipantStoreSchema } from "./validator.js";
+import { validateMessageStoreSchema, validateParticipantStoreSchema } from "./validator.js";
 
 dotenv.config();
 const app = express();
@@ -25,11 +25,7 @@ app.post("/participants", async (req, res) => {
 	const session = mongoClient.startSession();
 
 	try {
-		if (
-			await db
-				.collection("participants")
-				.countDocuments({ name: name }, { limit: 1 })
-		)
+		if (await db.collection("participants").countDocuments({ name: name }, { limit: 1 }))
 			return res.sendStatus(409);
 
 		session.startTransaction();
@@ -56,6 +52,54 @@ app.post("/participants", async (req, res) => {
 app.get("/participants", async (req, res) => {
 	const participants = await db.collection("participants").find().toArray();
 	return res.send(participants);
+});
+
+app.post("/messages", async (req, res) => {
+	const { to, text, type, error } = validateMessageStoreSchema(req.body);
+	const participant = await db.collection("participants").find({ name: req.headers.user }).next();
+
+	if (error || !participant) return res.sendStatus(422);
+
+	try {
+		const message = new Message({
+			to: to,
+			text: text,
+			type: type,
+			from: participant.name,
+		});
+		await db.collection("messages").insertOne(message);
+
+		return res.sendStatus(201);
+	} catch (error) {
+		return res.sendStatus(500);
+	}
+});
+
+app.get("/messages", async (req, res) => {
+	const { limit } = req.query;
+	const participant = await db.collection("participants").find({ name: req.headers.user }).next();
+
+	let messages;
+
+	const query = {
+		$or: [
+			{
+				type: 'message',
+			},
+			{
+				type: 'private_message',
+				from: participant.name
+			},
+			{
+				type: 'private_message',
+				to: participant.name
+			}
+		]
+	}
+
+	messages = await db.collection("messages").find(query, {limit: limit ? parseInt(limit) : null}).toArray();
+
+	return res.send(messages);
 });
 
 app.listen(PORT, () => console.log(`Listening on port ${PORT}`));

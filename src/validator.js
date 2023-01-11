@@ -11,8 +11,15 @@ const validator = (schema) => (payload) => {
   return result.error ? {error: result.error.details[0].message} : payload;
 };
 
-const participantsStoreSchema = Joi.object({
+const participantStoreSchema = Joi.object({
   name: Joi.string().required(),
 });
 
-export const validateParticipantStoreSchema = validator(participantsStoreSchema);
+const messageStoreSchema = Joi.object({
+  to: Joi.string().required(),
+  text: Joi.string().required(),
+  type: Joi.string().valid('message', 'private_message'),
+});
+
+export const validateParticipantStoreSchema = validator(participantStoreSchema);
+export const validateMessageStoreSchema = validator(messageStoreSchema);

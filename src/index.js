@@ -3,7 +3,7 @@ import express from "express";
 import cors from "cors";
 import Message from "./schemas/Message.js";
 import Participant from "./schemas/Participant.js";
-import { MongoClient } from "mongodb";
+import { MongoClient, ObjectId } from "mongodb";
 import { validateMessageStoreSchema, validateParticipantStoreSchema } from "./validator.js";
 
 dotenv.config();
@@ -16,6 +16,34 @@ app.use(express.json());
 
 const mongoClient = new MongoClient(process.env.DATABASE_URL);
 const db = mongoClient.db();
+
+setInterval(async () => {
+	const participants = await db.collection("participants").find({lastStatus:{$lt:new Date()-10000}}).toArray();
+
+	participants.map(participant => removeParticipant(participant))
+}, 150000);
+
+const removeParticipant = async (participant) => {
+	const session = mongoClient.startSession();
+
+	try {
+		session.startTransaction();
+
+		const message = new Message({
+			from: participant.name,
+			text: "sai da sala...",
+		});
+
+		db.collection("messages").insertOne(message);
+		db.collection("participants").deleteOne({_id: participant._id});
+
+		await session.commitTransaction();
+	} catch (error) {
+		await session.abortTransaction();
+	} finally {
+		await session.endSession();
+	}
+}
 
 app.post("/participants", async (req, res) => {
 	const { name, error } = validateParticipantStoreSchema(req.body);
@@ -79,6 +107,8 @@ app.get("/messages", async (req, res) => {
 	const { limit } = req.query;
 	const participant = await db.collection("participants").find({ name: req.headers.user }).next();
 
+	if (!participant) return res.sendStatus(401);
+
 	let messages;
 
 	const query = {
@@ -100,6 +130,61 @@ app.get("/messages", async (req, res) => {
 	messages = await db.collection("messages").find(query, {limit: limit ? parseInt(limit) : null}).toArray();
 
 	return res.send(messages);
+});
+
+app.post("/status", async (req, res) => {
+	const participant = await db.collection("participants").find({ name: req.headers.user }).next();
+
+	if (!participant) return res.sendStatus(404);
+
+	try {
+		await db.collection("participants").updateOne({name: participant.name}, { $set: {lastStatus: Date.now()}});
+
+		return res.sendStatus(200);
+	} catch (error) {
+		console.log(error);
+		return res.sendStatus(500);
+	}
+});
+
+app.delete("/messages/:id", async (req, res) => {
+	const { id } = req.params;
+
+	const participant = await db.collection("participants").find({ name: req.headers.user }).next();
+
+	const message = await db.collection("messages").find({_id: ObjectId(id)}).next();
+
+	if (!message) return res.sendStatus(404);
+
+	if (message.from !== participant.name) return res.sendStatus(401);
+
+	db.collection("messages").deleteOne({_id: message._id});
+
+	return res.sendStatus(200);
+});
+
+app.put("/messages/:id", async (req, res) => {
+	const { id } = req.params;
+	const { to, text, type, error } = validateMessageStoreSchema(req.body);
+	const participant = await db.collection("participants").find({ name: req.headers.user }).next();
+
+	if (error || !participant) return res.sendStatus(422);
+
+	const message = await db.collection("messages").find({_id: ObjectId(id)}).next();
+
+	if (!message) return res.sendStatus(404);
+
+	if (message.from !== participant.name) return res.sendStatus(401);
+
+	try {
+		const data = { to: to, text: text, type: type };
+		await db.collection("messages").updateOne({_id: message._id}, {$set: data});
+
+		return res.sendStatus(200);
+	} catch (error) {
+		console.log(error);
+		return res.sendStatus(500);
+	}
 });
 
 app.listen(PORT, () => console.log(`Listening on port ${PORT}`));

@@ -54,9 +54,7 @@ app.post("/participants", async (req, res) => {
 });
 
 app.get("/participants", async (req, res) => {
-	const participants = [];
-	const cursor = db.collection("participants").find();
-	await cursor.forEach((participant) => participants.push(participant));
+	const participants = await db.collection("participants").find().toArray();
 	return res.send(participants);
 });
 

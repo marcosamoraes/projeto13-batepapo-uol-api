@@ -21,7 +21,7 @@ setInterval(async () => {
 	const participants = await db.collection("participants").find({lastStatus:{$lt:new Date()-10000}}).toArray();
 
 	participants.map(participant => removeParticipant(participant))
-}, 15000);
+}, 150000);
 
 const removeParticipant = async (participant) => {
 	const session = mongoClient.startSession();
@@ -114,6 +114,9 @@ app.get("/messages", async (req, res) => {
 	const query = {
 		$or: [
 			{
+				type: 'status',
+			},
+			{
 				type: 'message',
 			},
 			{
@@ -127,9 +130,9 @@ app.get("/messages", async (req, res) => {
 		]
 	}
 
-	messages = await db.collection("messages").find(query, {limit: limit ? parseInt(limit) : null}).toArray();
+	messages = await db.collection("messages").find(query, {limit: limit ? parseInt(limit) : null, sort: {time: -1}}).toArray();
 
-	return res.send(messages);
+	return res.send(messages.reverse());
 });
 
 app.post("/status", async (req, res) => {

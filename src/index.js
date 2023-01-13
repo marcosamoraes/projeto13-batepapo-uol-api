@@ -17,6 +17,12 @@ app.use(express.json());
 const mongoClient = new MongoClient(process.env.DATABASE_URL);
 const db = mongoClient.db();
 
+setInterval(async () => {
+	const participants = await db.collection("participants").find({lastStatus:{$lt:new Date()-10000}}).toArray();
+
+	participants.map(participant => removeParticipant(participant))
+}, 150000);
+
 const removeParticipant = async (participant) => {
 	const session = mongoClient.startSession();
 
@@ -39,11 +45,6 @@ const removeParticipant = async (participant) => {
 	}
 }
 
-setInterval(async () => {
-	const participants = await db.collection("participants").find({lastStatus:{$lt:parseInt(new Date().getTime())-10000}}).toArray();
-	participants.map(participant => removeParticipant(participant));
-}, 15000);
-
 app.post("/participants", async (req, res) => {
 	const { name, error } = validateParticipantStoreSchema(req.body);
 
@@ -62,7 +63,7 @@ app.post("/participants", async (req, res) => {
 
 		const message = new Message({
 			from: participant.name,
-			text: "entra na sala...",
+			text: "Entrou na sala...",
 		});
 		await db.collection("messages").insertOne(message);
 
@@ -103,15 +104,18 @@ app.post("/messages", async (req, res) => {
 });
 
 app.get("/messages", async (req, res) => {
-	const limit = req.query.limit ? parseInt(req.query.limit) : undefined;
+	const { limit } = req.query;
 	const participant = await db.collection("participants").find({ name: req.headers.user }).next();
-
-	if (limit <= 0) return res.sendStatus(422);
 
 	if (!participant) return res.sendStatus(401);
 
+	let messages;
+
 	const query = {
 		$or: [
+			{
+				type: 'status',
+			},
 			{
 				type: 'message',
 			},
@@ -124,21 +128,11 @@ app.get("/messages", async (req, res) => {
 				to: participant.name
 			}
 		]
-	};
+	}
 
-	let messages = await db.collection("messages").find(query, {limit: limit, sort: {time: -1}}).toArray();
+	messages = await db.collection("messages").find(query, {limit: limit ? parseInt(limit) : null, sort: {time: -1}}).toArray();
 
-	messages = messages.reduce((acc, message) => {
-		acc.push({
-      to: message.to,
-			text: message.text,
-      type: message.type,
-			from: message.from,
-		});
-    return acc;
-	}, []);
-
-	return res.send(messages);
+	return res.send(messages.reverse());
 });
 
 app.post("/status", async (req, res) => {

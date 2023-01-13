@@ -48,7 +48,7 @@ const removeParticipant = async (participant) => {
 app.post("/participants", async (req, res) => {
 	const { name, error } = validateParticipantStoreSchema(req.body);
 
-	if (error) return res.sendStatus(422);
+	if (error) return res.status(422).send();
 
 	const session = mongoClient.startSession();
 

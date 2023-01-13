@@ -17,12 +17,6 @@ app.use(express.json());
 const mongoClient = new MongoClient(process.env.DATABASE_URL);
 const db = mongoClient.db();
 
-setInterval(async () => {
-	const participants = await db.collection("participants").find({lastStatus:{$lt:parseInt(new Date())-10000}}).toArray();
-
-	participants.map(participant => removeParticipant(participant));
-}, 15000);
-
 const removeParticipant = async (participant) => {
 	const session = mongoClient.startSession();
 
@@ -44,6 +38,11 @@ const removeParticipant = async (participant) => {
 		await session.endSession();
 	}
 }
+
+setInterval(async () => {
+	const participants = await db.collection("participants").find({lastStatus:{$lt:parseInt(new Date().getTime())-10000}}).toArray();
+	participants.map(participant => removeParticipant(participant));
+}, 15000);
 
 app.post("/participants", async (req, res) => {
 	const { name, error } = validateParticipantStoreSchema(req.body);
@@ -114,7 +113,7 @@ app.get("/messages", async (req, res) => {
 	const query = {
 		$or: [
 			{
-				type: 'message',
+				type: 'status',
 			},
 			{
 				type: 'private_message',

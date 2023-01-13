@@ -21,7 +21,7 @@ setInterval(async () => {
 	const participants = await db.collection("participants").find({lastStatus:{$lt:new Date()-10000}}).toArray();
 
 	participants.map(participant => removeParticipant(participant))
-}, 150000);
+}, 15000);
 
 const removeParticipant = async (participant) => {
 	const session = mongoClient.startSession();
@@ -63,7 +63,7 @@ app.post("/participants", async (req, res) => {
 
 		const message = new Message({
 			from: participant.name,
-			text: "Entrou na sala...",
+			text: "entra na sala...",
 		});
 		await db.collection("messages").insertOne(message);
 

@@ -5,7 +5,7 @@ const validator = (schema) => (payload) => {
   const result = schema.validate(payload);
 
   for (const [key, value] of Object.entries(payload)) {
-    payload[key] = value ? stripHtml(value.trim()).result : null;
+    payload[key] = value && typeof value === 'string' ? stripHtml(value.trim()).result : null;
   }
 
   return result.error ? {error: result.error.details[0].message} : payload;

@@ -104,10 +104,10 @@ app.post("/messages", async (req, res) => {
 });
 
 app.get("/messages", async (req, res) => {
-	const { limit } = req.query;
+	const limit = req.query.limit ? parseInt(req.query.limit) : null;
 	const participant = await db.collection("participants").find({ name: req.headers.user }).next();
 
-  if (limit && limit < 1) return res.sendStatus(422);
+  if (limit !== null && (limit <= 0 || typeof limit === 'string' ) ) return res.sendStatus(422);
 
 	if (!participant) return res.sendStatus(401);
 

@@ -106,7 +106,7 @@ app.post("/messages", async (req, res) => {
 app.get("/messages", async (req, res) => {
 	const limit = req.query.limit ? parseInt(req.query.limit) : null;
 	const participant = await db.collection("participants").find({ name: req.headers.user }).next();
-  console.log(limit)
+
   if (limit !== null && (limit <= 0 || isNaN(limit)) ) return res.sendStatus(422);
 
 	if (!participant) return res.sendStatus(401);

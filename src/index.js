@@ -42,7 +42,7 @@ const removeParticipant = async (participant) => {
 setInterval(async () => {
 	const participants = await db.collection("participants").find({lastStatus:{$lt:parseInt(new Date().getTime())-10000}}).toArray();
 	participants.map(participant => removeParticipant(participant));
-}, 150000);
+}, 15000);
 
 app.post("/participants", async (req, res) => {
 	const { name, error } = validateParticipantStoreSchema(req.body);
@@ -113,7 +113,7 @@ app.get("/messages", async (req, res) => {
 	const query = {
 		$or: [
 			{
-				type: 'status',
+				type: 'message',
 			},
 			{
 				type: 'private_message',

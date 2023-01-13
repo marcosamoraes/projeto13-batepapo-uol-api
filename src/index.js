@@ -42,7 +42,7 @@ const removeParticipant = async (participant) => {
 setInterval(async () => {
 	const participants = await db.collection("participants").find({lastStatus:{$lt:parseInt(new Date().getTime())-10000}}).toArray();
 	participants.map(participant => removeParticipant(participant));
-}, 15000);
+}, 150000);
 
 app.post("/participants", async (req, res) => {
 	const { name, error } = validateParticipantStoreSchema(req.body);
@@ -103,10 +103,10 @@ app.post("/messages", async (req, res) => {
 });
 
 app.get("/messages", async (req, res) => {
-	const { limit } = req.query;
+	const limit = req.query.limit ? parseInt(req.query.limit) : undefined;
 	const participant = await db.collection("participants").find({ name: req.headers.user }).next();
 
-	if (limit && (typeof limit !== Number || limit <= 0)) return res.sendStatus(422);
+	if (limit <= 0) return res.sendStatus(422);
 
 	if (!participant) return res.sendStatus(401);
 
@@ -126,7 +126,7 @@ app.get("/messages", async (req, res) => {
 		]
 	};
 
-	let messages = await db.collection("messages").find(query, {limit: limit ? parseInt(limit) : null, sort: {time: -1}}).toArray();
+	let messages = await db.collection("messages").find(query, {limit: limit, sort: {time: -1}}).toArray();
 
 	messages = messages.reduce((acc, message) => {
 		acc.push({

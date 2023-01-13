@@ -132,7 +132,7 @@ app.get("/messages", async (req, res) => {
 		]
 	}
 
-	messages = await db.collection("messages").find(query, {limit: limit ? parseInt(limit) : null, sort: {time: -1}}).toArray();
+	messages = await db.collection("messages").find(query, {limit: limit ? parseInt(limit) : null, sort: {_id: -1}}).toArray();
 
 	return res.send(messages);
 });

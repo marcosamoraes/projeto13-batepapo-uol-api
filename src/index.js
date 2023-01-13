@@ -107,7 +107,7 @@ app.get("/messages", async (req, res) => {
 	const { limit } = req.query;
 	const participant = await db.collection("participants").find({ name: req.headers.user }).next();
 
-	if (limit && limit <= 0) return res.sendStatus(422);
+	if (limit && (typeof limit !== Number || limit <= 0)) return res.sendStatus(422);
 
 	if (!participant) return res.sendStatus(401);
 
@@ -130,7 +130,17 @@ app.get("/messages", async (req, res) => {
 		]
 	};
 
-	const messages = await db.collection("messages").find(query, {limit: limit ? parseInt(limit) : null, sort: {time: -1}}).toArray();
+	let messages = await db.collection("messages").find(query, {limit: limit ? parseInt(limit) : null, sort: {time: -1}}).toArray();
+
+	messages = messages.reduce((acc, message) => {
+		acc.push({
+      to: message.to,
+			text: message.text,
+      type: message.type,
+			from: message.from,
+		});
+    return acc;
+	}, []);
 
 	return res.send(messages);
 });

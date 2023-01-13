@@ -34,8 +34,8 @@ const removeParticipant = async (participant) => {
 			text: "sai da sala...",
 		});
 
-		db.collection("messages").insertOne(message);
-		db.collection("participants").deleteOne({_id: participant._id});
+		await db.collection("messages").insertOne(message);
+		await db.collection("participants").deleteOne({_id: participant._id});
 
 		await session.commitTransaction();
 	} catch (error) {
@@ -163,7 +163,7 @@ app.delete("/messages/:id", async (req, res) => {
 
 	if (message.from !== participant.name) return res.sendStatus(401);
 
-	db.collection("messages").deleteOne({_id: message._id});
+	await db.collection("messages").deleteOne({_id: message._id});
 
 	return res.sendStatus(200);
 });

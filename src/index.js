@@ -18,10 +18,10 @@ const mongoClient = new MongoClient(process.env.DATABASE_URL);
 const db = mongoClient.db();
 
 setInterval(async () => {
-	const participants = await db.collection("participants").find({lastStatus:{$lt:new Date()-10000}}).toArray();
+	const participants = await db.collection("participants").find({lastStatus:{$lt:parseInt(new Date())-10000}}).toArray();
 
-	participants.map(participant => removeParticipant(participant))
-}, 150000);
+	participants.map(participant => removeParticipant(participant));
+}, 15000);
 
 const removeParticipant = async (participant) => {
 	const session = mongoClient.startSession();
@@ -63,7 +63,7 @@ app.post("/participants", async (req, res) => {
 
 		const message = new Message({
 			from: participant.name,
-			text: "Entrou na sala...",
+			text: "entra na sala...",
 		});
 		await db.collection("messages").insertOne(message);
 
@@ -107,9 +107,9 @@ app.get("/messages", async (req, res) => {
 	const { limit } = req.query;
 	const participant = await db.collection("participants").find({ name: req.headers.user }).next();
 
-	if (!participant) return res.sendStatus(401);
+	if (limit && limit <= 0) return res.sendStatus(422);
 
-	let messages;
+	if (!participant) return res.sendStatus(401);
 
 	const query = {
 		$or: [
@@ -128,11 +128,11 @@ app.get("/messages", async (req, res) => {
 				to: participant.name
 			}
 		]
-	}
+	};
 
-	messages = await db.collection("messages").find(query, {limit: limit ? parseInt(limit) : null, sort: {time: -1}}).toArray();
+	const messages = await db.collection("messages").find(query, {limit: limit ? parseInt(limit) : null, sort: {time: -1}}).toArray();
 
-	return res.send(messages.reverse());
+	return res.send(messages);
 });
 
 app.post("/status", async (req, res) => {

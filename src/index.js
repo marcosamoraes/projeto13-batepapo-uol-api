@@ -107,6 +107,8 @@ app.get("/messages", async (req, res) => {
 	const { limit } = req.query;
 	const participant = await db.collection("participants").find({ name: req.headers.user }).next();
 
+  if (limit && limit < 1) return res.sendStatus(422);
+
 	if (!participant) return res.sendStatus(401);
 
 	let messages;
@@ -132,7 +134,7 @@ app.get("/messages", async (req, res) => {
 
 	messages = await db.collection("messages").find(query, {limit: limit ? parseInt(limit) : null, sort: {time: -1}}).toArray();
 
-	return res.send(messages.reverse());
+	return res.send(messages);
 });
 
 app.post("/status", async (req, res) => {

@@ -114,9 +114,6 @@ app.get("/messages", async (req, res) => {
 	const query = {
 		$or: [
 			{
-				type: 'status',
-			},
-			{
 				type: 'message',
 			},
 			{
